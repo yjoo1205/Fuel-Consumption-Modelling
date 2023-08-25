@@ -21,7 +21,7 @@ Data Privacy Statement: This project repository contains essential documents int
 | Feature | Tools & Techniques | Data |
 |------------|-----------------------------|------------------------------|
 |Route Planner   |Techniques: Dijkstra, Rule-based Approach, Routing problem solution methods  <br> Tools: Google OR-Tools |Real delivery location history and/or simulated data of locations in Singapore. |
-|Fuel Consumption Model|Techniques: Multi-linear regression, Ridge regression, Lasso regression <br> Tools: R-studio |Detailed historical delivery data|
+|Fuel Consumption Model|Techniques: Multiple regression, Ridge regression, Lasso regression <br> Tools: R-studio |Detailed historical delivery data|
 |Telegram Chatbot  |Techniques: Data cleaning and visualisation <br>Tools: Telegram Bot API, pandas, numpy, sklearn |Driver’s location |
 |Driver Performance Dashboard  |Tools: Power BI  |Detailed Trip reports, Movement Reports |
 |Microsoft Power Application |Tools: Microsoft Power Application, Python, Flask, ReactJs, Docker, Ms Azure | |
