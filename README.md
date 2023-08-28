@@ -16,6 +16,8 @@ This project has 3 main goals:
 
 Data Privacy Statement: This project repository contains essential documents intended for demonstration purposes. To safeguard sensitive information, the original data has been replaced with dummy data. This measure ensures that no confidential data is accessible within this repository. The analysis presented here is conducted using the substitute dummy data for illustrative purposes.
 
+**In consideration of confidentiality concerns, this repository exclusively showcases the application of predictive modeling techniques to a fuel consumption model.**
+
 ### Tools and Techniques
 
 | Feature | Tools & Techniques | Data |
