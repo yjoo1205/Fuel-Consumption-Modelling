@@ -8,7 +8,8 @@ ComfortDelgro Engineering (CDGE) is a subsidiary of ComfortDelgro, the largest v
 - [Tools and Techniques](#tools-and-techniques)
 - [Introduction](#introduction---fuel-consumption-model)
 - [Datasets](#datasets)
-- [Limitations](#limitations)
+- [Analysis](#analysis)
+- [Limitations and Future Work](#limitations-and-future-work)
 - [References](#references)
 
 ## Project Overview
@@ -18,9 +19,8 @@ This project has three main objectives:
 2. Enhanced visibility over delivery status for internal tracking and external clients.
 3. Fuel consumption prediction to facilitate resource planning.
 
-**Data Privacy Statement:** This project repository contains essential documents for demonstration purposes. To protect sensitive information, the original data has been replaced with dummy data. This ensures that no confidential data is exposed within this repository. The analysis presented here utilizes substitute dummy data for illustrative purposes.
+**Data Privacy Statement:** This project repository contains essential documents for demonstration purposes. To protect sensitive information, the original data has been replaced with dummy data. This ensures that no confidential data is exposed within this repository. The analysis presented here utilizes substituted dummy data for illustrative purposes.
 
-**In light of confidentiality concerns, this repository exclusively showcases the application of predictive modeling techniques to a fuel consumption model.**
 
 ### Tools and Techniques
 
@@ -32,11 +32,13 @@ This project has three main objectives:
 | Driver Performance Dashboard | Tools: Power BI | Detailed Trip reports, Movement Reports |
 | Microsoft Power Application | Tools: Microsoft Power Application, Python, Flask, ReactJs, Docker, Ms Azure | |
 
-### Introduction - Fuel Consumption Model
+**In light of confidentiality concerns, this repository exclusively showcases the application of predictive modeling techniques to a fuel consumption model.**
+
+## Introduction - Fuel Consumption Model
 
 Our analysis takes a two-pronged approach to the fuel consumption of trucks. The first model seeks relationships between independent variables affecting fuel consumption, providing actionable insights for better efficiency. The second model aims to predict future truck fuel consumption based on identified independent variables, enabling effective resource planning.
 
-### Datasets
+## Datasets
 
 The dataset, provided by our sponsor, consists of truck data from February 2020 to February 2021. The dataset includes several reports:
 - Detail Trip Report
@@ -46,8 +48,7 @@ The dataset, provided by our sponsor, consists of truck data from February 2020 
 
 While the data was user-friendly in Excel, data cleaning was necessary due to its interface origin. The dataset's limitations stem from the number of trucks and available metrics, making it suitable for fundamental analysis but limited in visualization and deeper insights.
 
-### Limitations
-
+### Data Limitations
 1. The system only allows extraction of data from the past year, limiting our duration.
 2. There are only four trucks, with three of the same make and model, and one smaller truck.
 3. Some metrics are monthly, resulting in only 39 rows of data.
