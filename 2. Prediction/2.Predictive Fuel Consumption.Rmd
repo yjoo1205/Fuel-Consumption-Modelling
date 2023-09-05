@@ -1,0 +1,426 @@
+---
+title: "Predictive Modelling"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+#### Required libraries
+```{r}
+library(fitdistrplus)
+library(tidyverse)
+library(leaps)
+library(glmnet)
+library(gridExtra)
+library(dplyr)
+library(shiny)
+```
+
+#### Datasets
+```{r}
+df <- as.data.frame(read_csv("final_report.csv"))
+attach(df)
+head(df)
+summary(df)
+str(df)
+View(df)
+dim(df)
+df1 <- df[-8]
+```
+#### Variables
+
+Dependent Variable: Total fuel consumed
+Independent Variables: Offences, total_idling, total_duration, total_distance 
+
+####Model Selection
+
+We decided to examine the effect of different predictor variables on fuel consumption.
+
+To do this analysis, we start with Best Subset Selection and select the best model based on: 
+
+(a) Indirect Estimates of MSE (rss, adj rsq, bic, cp) - shortlist one model from here
+(b) Direct Estimates of MSE - shortlist one model each based on Validation Set Approach and 5-fold CV. 
+
+This process is repeated twice, taking individual offenses and total count of offenses. 
+
+So, in the end we will get 6 models to choose from.
+
+Out of these 6 models, we shortlist 1 based onh adj rsq.
+
+#### 1. Using Individual offences 
+
+#### Best Subset Selection based on indirect estimates of MSE
+```{r}
+fuel_model <- regsubsets(fuel ~.-date-registration, data = df1, nvmax = 8)
+summary(fuel_model)
+```
+Based on graphical analysis, we use model suggested by the cp criterion
+```{r}
+plot(summary(fuel_model)$rss, main="RSS plot", 
+     xlab="Number of variables", ylab="RSS", type="b")
+plot(summary(fuel_model)$adjr2, main="Adjusted r^2 plot", 
+     xlab="Number of variables", ylab="Adjusted r^2", type="b")
+plot(summary(fuel_model)$cp, main="Cp plot", 
+     xlab="Number of variables", ylab="Cp", type="b")
+plot(summary(fuel_model)$bic, main="BIC plot", 
+     xlab="Number of variables", ylab="BIC", type="b")
+a <- which.min(summary(fuel_model)$rss)#selected criteria
+b <- which.max(summary(fuel_model)$adjr2)
+c <- which.min(summary(fuel_model)$cp) 
+d <- which.min(summary(fuel_model)$bic)
+
+# we will be using cp to compare
+coef(fuel_model, c)#chosen
+```
+
+This is the chosen model for cp:
+
+```{r}
+fuel_model_cp <- lm(fuel ~ accel+cornering+total_duration, data = df1)
+summary(fuel_model_cp)
+```
+
+#### Model selection using direct estimates of MSE
+
+#### (a) Validation Set Approach
+
+```{r}
+RNGkind(sample.kind="Rounding") 
+options(na.action='na.pass')
+set.seed(1)
+train <- sample(c(TRUE, FALSE), nrow(df1), rep=TRUE)  # get the random training set
+test <- (!train)                # set the rest as test set
+df1[train,][is.na(df1[train,])] = 0
+df1[test,][is.na(df1[test,])] = 0
+
+regfit22.all <- regsubsets(fuel ~.-date-registration, df1[train,], nvmax=6) #run the best selection on training set
+test.mat <- model.matrix(fuel ~.-date-registration, df1[test,])  # make the model matrix from the test data
+val.errors <- rep(NA, 6)
+
+# run a loop, and for each value of i, we extract the coefficients from the regfit11.all
+# and then multiply the coefficients with the column of the test model matrix to form the predictions
+# ans then compute the test MSE
+for (i in 1:6) {
+  coefi <- coef(regfit22.all, id=i) # extract the coefficients
+  pred <- test.mat[, names(coefi)]%*%coefi # multiply the coefficients to form the prediction
+  val.errors[i] <- mean((df1$fuel[test]-pred)^2) # compute the test MSE
+}
+val.errors
+min(val.errors)
+aa <- which.min(val.errors)  # identify i with minimum MSE
+aa
+coef(regfit22.all, aa)  # the best selected model with coefficients
+# But we should use the full data set to get the model!
+coef(fuel_model, aa)
+```
+
+This is the chosen model for vsa:
+
+```{r}
+fuel_model_vsa <- lm(fuel ~  total_distance+ speeding+accel+cornering+total_idling+total_duration , data = df1)
+summary(fuel_model_vsa)
+```
+##### (b) 5-fold Cross-Validation
+```{r}
+predict.regsubsets <- function(object, newdata, id){
+  form <- as.formula(object$call[[2]])
+  mat <- model.matrix(form, newdata)
+  coefi <- coef(object, id=id)
+  xvars <- names(coefi)
+  mat[, xvars]%*%coefi
+}
+
+k <- 5  # determine the k-fold cross-validation
+
+RNGkind(sample.kind="Rounding")
+set.seed(1)
+
+folds <- sample(1:k, nrow(df1), replace=TRUE)
+cv.errors <- matrix(NA, k, 5, dimnames=list(NULL, paste(1:5)))
+for (j in 1:k) {
+  best.fit <- regsubsets(fuel ~.-date-registration, data=df1[folds!=j,], nvmax=5)
+  for (i in 1:5){
+    pred <- predict.regsubsets(best.fit, df1[folds==j,], id=i)
+    cv.errors[j,i] <- mean((df1$fuel[folds==j]-pred)^2)
+  }
+}
+mean.cv <- apply(cv.errors, 2, mean)#to average over the columns of matrix to error for each model
+mean.cv
+bb <- which.min(mean.cv)
+bb
+# we should use the full data as training set to get the full model
+coef(fuel_model, bb)
+```
+## Model using  5fold CV
+```{r}
+fuel_model_5cv <- lm(fuel~accel+total_duration)
+summary(fuel_model_5cv)
+```
+
+
+
+
+
+#### 2. Using Total Offences
+
+#### Best Subset Selection based on indirect estimates of MSE
+```{r}
+df2 <- df[-4]
+df2 <- df2[-4]
+df2 <- df2[-4]
+df2 <- df2[-4]
+
+
+
+fuel_model2 <- regsubsets(fuel ~.-date-registration, data = df2, nvmax = 4)
+summary(fuel_model2)
+```
+
+Based on graphical analysis, we use model suggested by the cp criterion
+```{r}
+plot(summary(fuel_model2)$rss, main="RSS plot", 
+     xlab="Number of variables", ylab="RSS", type="b")
+plot(summary(fuel_model2)$adjr2, main="Adjusted r^2 plot", 
+     xlab="Number of variables", ylab="Adjusted r^2", type="b")
+plot(summary(fuel_model2)$cp, main="Cp plot", 
+     xlab="Number of variables", ylab="Cp", type="b")
+plot(summary(fuel_model2)$bic, main="BIC plot", 
+     xlab="Number of variables", ylab="BIC", type="b")
+a <- which.min(summary(fuel_model2)$rss)#selected criteria
+b <- which.max(summary(fuel_model2)$adjr2)
+c <- which.min(summary(fuel_model2)$cp) 
+d <- which.min(summary(fuel_model2)$bic)
+
+# we will be using cp to compare
+coef(fuel_model2, c)#chosen
+```
+This is the chosen model for cp:
+
+```{r}
+fuel_model_cp2 <- lm(fuel ~ total_distance+total_offences , data = df2)
+summary(fuel_model_cp2)
+```
+#2) Model selection using direct estimates of MSE
+
+###(a) Validation Set Approach
+```{r}
+RNGkind(sample.kind="Rounding") 
+options(na.action='na.pass')
+set.seed(123)
+train <- sample(c(TRUE, FALSE), nrow(df2), rep=TRUE)  # get the random training set
+test <- (!train)                # set the rest as test set
+df2[train,][is.na(df2[train,])] = 0
+df2[test,][is.na(df2[test,])] = 0
+
+regfit22.all <- regsubsets(fuel ~.-date-registration, df2[train,], nvmax=4) #run the best selection on training set
+test.mat <- model.matrix(fuel ~ .-date-registration, df2[test,])  # make the model matrix from the test data
+val.errors <- rep(NA, 4)
+for (i in 1:4) {
+  coefi <- coef(regfit22.all, id=i) # extract the coefficients
+  pred <- test.mat[, names(coefi)]%*%coefi # multiply the coefficients to form the prediction
+  val.errors[i] <- mean((df2$fuel[test]-pred)^2) # compute the test MSE
+}
+val.errors
+print("this")
+min(val.errors)
+aa <- which.min(val.errors)  # identify i with minimum MSE
+aa
+coef(regfit22.all, aa)  # the best selected model with coefficients
+# But we should use the full data set to get the model!
+coef(fuel_model2, aa)
+```
+
+#### Model using Validation Set Approach
+```{r}
+fuel_model_vsa2 <- lm(fuel~total_distance+total_offences )
+summary(fuel_model_vsa2)
+```
+##### (b) 5-fold Cross-Validation
+
+```{r}
+predict.regsubsets <- function(object, newdata, id){
+  form <- as.formula(object$call[[2]])
+  mat <- model.matrix(form, newdata)
+  coefi <- coef(object, id=id)
+  xvars <- names(coefi)
+  mat[, xvars]%*%coefi
+}
+
+k <- 5  # determine the k-fold cross-validation
+
+RNGkind(sample.kind="Rounding")
+set.seed(1)
+
+folds <- sample(1:k, nrow(df2), replace=TRUE)
+cv.errors <- matrix(NA, k, 3, dimnames=list(NULL, paste(1:3)))
+for (j in 1:k) {
+  best.fit <- regsubsets(fuel ~.-date-registration, data=df2[folds!=j,], nvmax=3)
+  for (i in 1:3){
+    pred <- predict.regsubsets(best.fit, df2[folds==j,], id=i)
+    cv.errors[j,i] <- mean((df2$fuel[folds==j]-pred)^2)
+  }
+}
+print("this")
+min(cv.errors)
+mean.cv <- apply(cv.errors, 2, mean)#to average over the columns of matrix to error for each model
+mean.cv
+bb <- which.min(mean.cv)
+bb
+# we should use the full data as training set to get the full model
+coef(fuel_model2, bb)
+```
+## Model using  5fold CV
+```{r}
+fuel_model_5cv2 <- lm(fuel~total_duration+total_offences )
+summary(fuel_model_5cv2)
+```
+##Final Selected Model for Fuel
+
+We select the best model based on highest adj rsq value. However, although fuel_model_cp has the highest adjusted r square, it only contains 3 variables while fuel_model_vsa contains 6 variables with second highest adjusted R square. Hence, we chose fuel_model_vsa as our predictive model.  
+```{r}
+summary(fuel_model_cp)#0.7084 
+summary(fuel_model_vsa)#0.6926 
+summary(fuel_model_5cv)#0.2719 
+
+summary(fuel_model_cp2)#0.6365
+summary(fuel_model_vsa2) #0.4621 
+summary(fuel_model_5cv2)#0.4924 
+```
+
+
+Final Selected Model for Fuel:
+```{r}
+summary(fuel_model_vsa)
+```
+
+#ridge regression
+- Ridge regression is used when the number of predictor variables in a set exceeds the number of observations, or when a data set has multicollinearity (correlations between predictor variables).
+
+```{r}
+df2.train <- df2[train,]
+df2.test <- df2[test,]
+library(glmnet)
+train.x <- model.matrix(fuel~.-date-registration, data=df2.train)[,-1]
+train.y <-df2.train$fuel
+test.x <- model.matrix(fuel~.-date-registration, data=df2.test)[,-1]
+test.y <- df2.test$fuel
+ridge.mod <- cv.glmnet(train.x, train.y, alpha=0)
+lambda.rr <- ridge.mod$lambda.min
+lambda.rr
+ridge.pred <- predict(ridge.mod, newx=test.x, s=lambda.rr)
+mean((test.y-ridge.pred)^2)
+x <- model.matrix(fuel~.-date-registration, data=df2)[,-1]
+y <- df2$fuel
+out.rr <- glmnet(x,y, alpha=0)
+rr.coef <- predict(out.rr, type="coefficients", s=lambda.rr)[1:4,]
+rr.coef
+```
+## Model using  Ridge Regression
+```{r}
+fuel_model_ridge<- lm(fuel~total_distance+total_offences+total_idling)
+summary(fuel_model_ridge)
+```
+
+#Lasso Regression
+```{r}
+lasso.mod <- cv.glmnet(train.x, train.y, alpha=1)
+lambda.lasso <- lasso.mod$lambda.min
+lambda.lasso
+lasso.pred <- predict(lasso.mod, newx=test.x, s=lambda.lasso)
+mean((test.y-lasso.pred)^2)
+out.lasso <- glmnet(x,y, alpha=1)
+lasso.coef <- predict(out.lasso, type="coefficients", s=lambda.lasso)[1:4,]
+lasso.coef[lasso.coef !=0]
+
+```
+## Model using  Lasso
+```{r}
+fuel_model_lasso<- lm(fuel~total_distance+total_offences )
+summary(fuel_model_lasso)
+```
+
+Test errors:
+1)multiple linear regression (Validation Set Error): 10488.21
+2)ridge regression :  10613.38
+3)lasso regression :  10352.16
+
+Lasso regression model has the smallest amount of test error but multiple linear regression has MSE close to the lasso regression. Since there are more variables to consider in the multiple linear regression, we choose (1) as our final model. 
+
+The model is: 
+```{r}
+summary(fuel_model_vsa)
+```
+
+####Creating Simple Shiny App for User Interaction to use Predictive Model 
+
+```{r}
+library(shiny)
+fuel_cons = 
+server <- function(input,output){
+  output$total_distance <- renderText({ 
+    paste("Total Distance: ", input$total_distance)
+    
+  })
+  output$total_duration <- renderText({ 
+    paste("Total Duration: ", input$total_duration)
+    
+  })
+  output$total_idling <- renderText({ 
+    paste("Total Idling: ", input$total_idling)
+    
+  })
+  output$Speeding <- renderText({ 
+    paste("Total Distance: ", input$Speeding)
+    
+  })
+  output$Acceleration<- renderText({ 
+    paste("Total Acceleration: ", input$Acceleration)
+    
+  })
+  output$Cornering<- renderText({ 
+    paste("Total Cornering: ", input$Cornering)
+  })
+  output$Answer<- renderText({ 
+    paste("Predicted Fuel Consumption: ",152.51710+ 0.07373* input$total_distance  -1.92080 * input$Speeding -6.70395* input$Acceleration -0.53071* input$Cornering -0.10097*input$total_idling +  0.10376* input$total_duration)
+  })
+}
+
+ui <- fluidPage(
+  titlePanel("Predicted Fuel Consumption"),
+  sidebarLayout(
+    sidebarPanel(
+      helpText("Predict Fuel Consumptions with these variables:"),
+  sliderInput(inputId = "total_distance",
+              label = "Choose a distance",
+              value = 25, min = 1, max = 2500),
+  sliderInput(inputId = "total_duration",
+              label = "Choose a duration",
+              value = 25, min = 1, max = 6000),
+  sliderInput(inputId = "total_idling",
+              label = "Choose an Idling Duration",
+              value = 25, min = 1, max = 1000),
+  sliderInput(inputId = "Speeding",
+              label = "Choose Speeding Count",
+              value = 25, min = 1, max = 300),
+  sliderInput(inputId = "Acceleration",
+              label = "Choose Acceleration Count",
+              value = 25, min = 1, max = 300),
+  sliderInput(inputId = "Cornering",
+              label = "Choose Cornering Count",
+              value = 25, min = 1, max = 300),
+  
+  
+  ),mainPanel(
+      textOutput("total_distance"),
+      textOutput("total_duration"),
+      textOutput("total_idling"),
+      textOutput("Speeding"),
+      textOutput("Acceleration"),
+      textOutput("Cornering"),
+      textOutput("Answer")
+    )
+  
+  ))
+
+shinyApp(server = server,ui=ui)
+
+```

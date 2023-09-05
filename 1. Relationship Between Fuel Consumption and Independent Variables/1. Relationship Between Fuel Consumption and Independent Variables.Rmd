@@ -1,0 +1,114 @@
+---
+title: 'Multiple Regression Model'
+subtitle: 'To find the relationship of each independent variable on the dependent variable (fuel per 100 km)'
+output:
+  html_notebook: default
+  pdf_document: default
+---
+#### Required libraries
+```{r}
+library(fitdistrplus)
+library(tidyverse)
+library(leaps)
+library(glmnet)
+library(gridExtra)
+library(dplyr)
+library(shiny)
+```
+
+#### Datasets
+```{r}
+df <- as.data.frame(read_csv("final_1_report.csv"))
+head(df)
+summary(df)
+#str(df)
+#View(df)
+attach(df)
+dim(df)
+fuel <- `fuel/100km` 
+```
+#### Find the distribution of the fuel consumed per 100km. 
+
+- By comparing the 3 distributions, we can see that normal distribution is the best choice to fit the model since it has the smallest AIC of 273.6277 as compared to 278.2701 and 335.8233 from lognorm and exponentil distribution respectively. 
+```{r}
+fc1 <- fitdist(`fuel/100km`, distr="norm")
+fc2 <- fitdist(`fuel/100km`, distr="lnorm")
+fc3 <- fitdist(`fuel/100km`, distr="exp")
+summary(fc1)
+summary(fc2)
+summary(fc3)
+```
+
+#### Observe the relationship between the Variables 
+```{r}
+pairs(df[2:8])
+```
+#### Check for multicollinearity 
+- High correlation between the independent variables make it difficult to distinguish the different independent variables’ effects
+- To prevent the problem of multicollinearity, remove some independent variables to ensure that they do not have high correlations.
+- Investigating the correlation matrix for the independent variables, we find that two variables have more correlation coefficients larger than 0.5: total distance and total duration, car and total offences.
+
+```{r}
+library(corrplot)
+correlation <- cor(as.matrix(df[2:8]))
+round(correlation,3)
+corrplot(correlation, type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+```
+By investigating on the two variables further, we concluded that the observed level of multicollinearity should still be considered when doing model estimation because we have a highR2 and there are some significant effects in the original model. Hence, we concluded that multicollinearity was not a critical problem.
+
+
+#### Multiple Regression 
+
+check for significance of each variable in the model 
+```{r}
+model_fuel1 <- lm(`fuel/100km` ~.-date-total_offences-total_distance, data = df)
+summary(model_fuel1)
+anova(model_fuel1)
+```
+
+
+
+####Check for interaction effect 
+Result: there is no interaction effect since model_fuel1a has the highest adjusted R-squared.
+
+```{r}
+model_fuel1a <- lm(`fuel/100km` ~ car + `offences/100km` + total_duration, data = df)
+summary(model_fuel1a)
+
+model_fuel1b <- lm(`fuel/100km` ~ car + `offences/100km` * total_duration, data = df)
+summary(model_fuel1b)
+
+model_fuel1c <- lm(`fuel/100km` ~ `offences/100km` + total_duration * car, data = df)
+summary(model_fuel1c)
+
+```
+
+####Residual analysis 
+Do residual analysis on the chosen model to determine if regression analysis is valid. 
+
+Result: The residual analysis does not provide any evidence to doubt about the model assumptions.
+```{r}
+
+chosen <- model_fuel1<- lm(`fuel/100km` ~ car+`offences/100km`+total_duration, data = df)
+plot(chosen$fitted.values, residuals(chosen), 
+     main="Relationship between predicted fuel consumption and residuals",
+     xlab="predicted fuel consumption", ylab="residuals")
+
+plot(`fuel/100km` , residuals(chosen), 
+     main="Relationship between fuel consumption and residuals",
+     xlab="fuel consumption", ylab="residuals")
+
+
+plot( `offences/100km`, residuals(chosen), 
+     main="Relationship between total offences/100km and residuals",
+     xlab="total distance ", ylab="residuals")
+plot(total_duration, residuals(chosen), 
+     main="Relationship between total duration and residuals",
+     xlab="total duration", ylab="residuals")
+
+library(fitdistrplus)
+fnorm <- fitdist(residuals(chosen), distr="norm")
+summary(fnorm)
+plot(fnorm)
+```
+
